@@ -1,16 +1,42 @@
 "use client";
 
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation"; // App Router version
 import { motion } from "framer-motion";
 import { MapPin, BarChart3, Users } from "lucide-react";
 
+interface DistrictRecord {
+  district_name: string;
+}
+
 export default function Home() {
+  const router = useRouter();
+  const [districts, setDistricts] = useState<string[]>([]);
+  const [selectedDistrict, setSelectedDistrict] = useState("");
+  const [inputDistrict, setInputDistrict] = useState("");
+
+  useEffect(() => {
+    async function fetchDistricts() {
+      const res = await fetch(
+        "https://api.data.gov.in/resource/ee03643a-ee4c-48c2-ac30-9f2ff26ab722?api-key=579b464db66ec23bdd000001cdd3946e44ce4aad7209ff7b23ac571b&format=json&filters[state_name]=TELANGANA"
+      );
+      const json = await res.json();
+      const districtNames = json.records.map(
+        (record: DistrictRecord) => record.district_name
+      );
+      setDistricts(Array.from(new Set(districtNames)));
+    }
+    fetchDistricts();
+  }, []);
+
+  const goToDistrict = () => {
+    const district = inputDistrict || selectedDistrict;
+    if (!district) return;
+    router.push(`/${encodeURIComponent(district)}`);
+  };
+
   return (
     <main className="min-h-screen flex flex-col items-center bg-gradient-to-b from-orange-50 to-green-50 text-gray-900">
-      {/* Navbar */}
-      <nav className="w-full flex justify-center items-center px-4 py-4 bg-white shadow-sm fixed top-0 left-0 z-10 border-b border-gray-200">
-        <h1 className="text-xl sm:text-2xl font-bold text-orange-600">NREGA Track</h1>
-      </nav>
-
       {/* Hero Section */}
       <section className="mt-24 text-center px-4 w-full max-w-md">
         <motion.h2
@@ -38,16 +64,29 @@ export default function Home() {
               type="text"
               placeholder="Type your district"
               className="flex-1 outline-none text-gray-700 text-base sm:text-lg px-2 py-2 rounded border border-gray-200"
+              value={inputDistrict}
+              onChange={(e) => setInputDistrict(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && goToDistrict()}
             />
           </div>
           <select
-            className="w-full sm:w-32 text-gray-700 text-base sm:text-lg border border-gray-200 rounded px-2 py-2"
+            className="w-full sm:w-40 text-gray-700 text-base sm:text-lg border border-gray-200 rounded px-2 py-2"
+            value={selectedDistrict}
+            onChange={(e) => setSelectedDistrict(e.target.value)}
           >
-            <option>Select</option>
-            <option>Nagpur</option>
-            <option>Pune</option>
-            <option>Solapur</option>
+            <option value="">Select District</option>
+            {districts.map((d) => (
+              <option key={d} value={d}>
+                {d}
+              </option>
+            ))}
           </select>
+          <button
+            onClick={goToDistrict}
+            className="bg-green-600 text-white px-4 py-2 rounded w-full sm:w-auto"
+          >
+            Go
+          </button>
         </motion.div>
       </section>
 
@@ -92,7 +131,6 @@ export default function Home() {
           </p>
         </motion.div>
       </section>
-
     </main>
   );
 }
